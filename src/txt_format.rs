@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 
 use crate::{errors::ParseResult, format::BankFormat, model::Transaction};
 
+/// Текстовый формат YPBankText.
 pub struct YPBankTxt;
 
 impl BankFormat for YPBankTxt {

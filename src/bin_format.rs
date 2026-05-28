@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 
 use crate::{errors::ParseResult, format::BankFormat, model::Transaction};
 
+/// Бинарный формат YPBankBin.
 pub struct YpBankBin;
 
 impl BankFormat for YpBankBin {
