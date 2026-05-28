@@ -102,8 +102,14 @@ impl BankFormat for YpBankText {
         parse_transactions(reader)
     }
 
-    fn write<W: Write>(_writer: W, _transactions: &[Transaction]) -> ParseResult<()> {
-        todo!()
+    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
+        for (index, transaction) in transactions.iter().enumerate() {
+            if index > 0 {
+                writeln!(writer)?;
+            }
+            write_transaction(&mut writer, transaction)?;
+        }
+        Ok(())
     }
 }
 
@@ -147,6 +153,18 @@ fn parse_text_line(line: &str, builder: &mut TransactionBuilder) -> ParseResult<
     })?;
 
     builder.set_field(key.trim(), value.trim())
+}
+
+fn write_transaction<W: Write>(writer: &mut W, transaction: &Transaction) -> ParseResult<()> {
+    writeln!(writer, "TX_ID: {}", transaction.tx_id)?;
+    writeln!(writer, "TX_TYPE: {}", transaction.tx_type)?;
+    writeln!(writer, "FROM_USER_ID: {}", transaction.from_user_id)?;
+    writeln!(writer, "TO_USER_ID: {}", transaction.to_user_id)?;
+    writeln!(writer, "AMOUNT: {}", transaction.amount)?;
+    writeln!(writer, "TIMESTAMP: {}", transaction.timestamp)?;
+    writeln!(writer, "STATUS: {}", transaction.status)?;
+    writeln!(writer, "DESCRIPTION: \"{}\"", transaction.description)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -233,6 +251,78 @@ DESCRIPTION: "User transfer"
         assert_eq!(transactions[1].tx_type, TxType::Transfer);
         assert_eq!(transactions[1].status, TxStatus::Failure);
         assert_eq!(transactions[1].description, "User transfer");
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_serializes_text_record() -> ParseResult<()> {
+        let mut output = Vec::new();
+        let transactions = [sample_transaction()];
+
+        YpBankText::write(&mut output, &transactions)?;
+
+        let output = String::from_utf8(output).map_err(|error| {
+            ParserError::InvalidFormat(format!("text output is not valid UTF-8: {error}"))
+        })?;
+
+        assert_eq!(
+            output,
+            "TX_ID: 1234567890123456\nTX_TYPE: DEPOSIT\nFROM_USER_ID: 0\nTO_USER_ID: 9876543210987654\nAMOUNT: 10000\nTIMESTAMP: 1633036800000\nSTATUS: SUCCESS\nDESCRIPTION: \"Terminal deposit\"\n"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_separates_records_with_blank_line() -> ParseResult<()> {
+        let mut output = Vec::new();
+        let transactions = [
+            sample_transaction(),
+            Transaction {
+                tx_id: 2312321321321321,
+                tx_type: TxType::Transfer,
+                from_user_id: 1231231231231231,
+                to_user_id: 9876543210987654,
+                amount: 1_000,
+                timestamp: 1_633_056_800_000,
+                status: TxStatus::Failure,
+                description: "User transfer".to_string(),
+            },
+        ];
+
+        YpBankText::write(&mut output, &transactions)?;
+
+        let output = String::from_utf8(output).map_err(|error| {
+            ParserError::InvalidFormat(format!("text output is not valid UTF-8: {error}"))
+        })?;
+
+        assert!(output.contains("DESCRIPTION: \"Terminal deposit\"\n\nTX_ID: 2312321321321321"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_then_read_preserves_transactions() -> ParseResult<()> {
+        let transactions = [
+            sample_transaction(),
+            Transaction {
+                tx_id: 2312321321321321,
+                tx_type: TxType::Transfer,
+                from_user_id: 1231231231231231,
+                to_user_id: 9876543210987654,
+                amount: 1_000,
+                timestamp: 1_633_056_800_000,
+                status: TxStatus::Failure,
+                description: "User transfer".to_string(),
+            },
+        ];
+        let mut output = Vec::new();
+
+        YpBankText::write(&mut output, &transactions)?;
+        let parsed = YpBankText::read(&output[..])?;
+
+        assert_eq!(parsed, transactions);
 
         Ok(())
     }
