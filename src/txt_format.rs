@@ -148,3 +148,169 @@ fn parse_text_line(line: &str, builder: &mut TransactionBuilder) -> ParseResult<
 
     builder.set_field(key.trim(), value.trim())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_transaction() -> Transaction {
+        Transaction {
+            tx_id: 1234567890123456,
+            tx_type: TxType::Deposit,
+            from_user_id: 0,
+            to_user_id: 9876543210987654,
+            amount: 10_000,
+            timestamp: 1_633_036_800_000,
+            status: TxStatus::Success,
+            description: "Terminal deposit".to_string(),
+        }
+    }
+
+    #[test]
+    fn read_parses_text_record() -> ParseResult<()> {
+        let input = br#"# Record 1 (Deposit)
+TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+DESCRIPTION: "Terminal deposit"
+"#;
+
+        let transactions = YpBankText::read(&input[..])?;
+
+        assert_eq!(transactions, vec![sample_transaction()]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_accepts_fields_in_any_order_and_without_final_blank_line() -> ParseResult<()> {
+        let input = br#"DESCRIPTION: "Terminal deposit"
+STATUS: SUCCESS
+TIMESTAMP: 1633036800000
+AMOUNT: 10000
+TO_USER_ID: 9876543210987654
+FROM_USER_ID: 0
+TX_TYPE: DEPOSIT
+TX_ID: 1234567890123456"#;
+
+        let transactions = YpBankText::read(&input[..])?;
+
+        assert_eq!(transactions, vec![sample_transaction()]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_parses_multiple_records_separated_by_blank_lines() -> ParseResult<()> {
+        let input = br#"TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+DESCRIPTION: "Terminal deposit"
+
+# Record 2 (Transfer)
+TX_ID: 2312321321321321
+TIMESTAMP: 1633056800000
+STATUS: FAILURE
+TX_TYPE: TRANSFER
+FROM_USER_ID: 1231231231231231
+TO_USER_ID: 9876543210987654
+AMOUNT: 1000
+DESCRIPTION: "User transfer"
+"#;
+
+        let transactions = YpBankText::read(&input[..])?;
+
+        assert_eq!(transactions.len(), 2);
+        assert_eq!(transactions[0], sample_transaction());
+        assert_eq!(transactions[1].tx_type, TxType::Transfer);
+        assert_eq!(transactions[1].status, TxStatus::Failure);
+        assert_eq!(transactions[1].description, "User transfer");
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_returns_missing_field_for_incomplete_record() {
+        let input = br#"TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+"#;
+
+        let result = YpBankText::read(&input[..]);
+
+        assert!(matches!(
+            result,
+            Err(ParserError::MissingField("FROM_USER_ID"))
+        ));
+    }
+
+    #[test]
+    fn read_returns_invalid_format_for_duplicate_field() {
+        let input = br#"TX_ID: 1234567890123456
+TX_ID: 1234567890123457
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+DESCRIPTION: "Terminal deposit"
+"#;
+
+        let result = YpBankText::read(&input[..]);
+
+        assert!(matches!(result, Err(ParserError::InvalidFormat(_))));
+    }
+
+    #[test]
+    fn read_returns_invalid_field_for_description_without_quotes() {
+        let input = br#"TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+DESCRIPTION: Terminal deposit
+"#;
+
+        let result = YpBankText::read(&input[..]);
+
+        match result {
+            Err(ParserError::InvalidField { field, value }) => {
+                assert_eq!(field, "DESCRIPTION");
+                assert_eq!(value, "Terminal deposit");
+            }
+            other => panic!("expected InvalidField for DESCRIPTION, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn read_returns_invalid_format_for_unknown_field() {
+        let input = br#"TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+UNKNOWN: value
+"#;
+
+        let result = YpBankText::read(&input[..]);
+
+        assert!(matches!(result, Err(ParserError::InvalidFormat(_))));
+    }
+
+    #[test]
+    fn read_returns_invalid_format_for_line_without_separator() {
+        let input = br#"TX_ID 1234567890123456
+"#;
+
+        let result = YpBankText::read(&input[..]);
+
+        assert!(matches!(result, Err(ParserError::InvalidFormat(_))));
+    }
+}
