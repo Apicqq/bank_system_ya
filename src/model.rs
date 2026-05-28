@@ -1,4 +1,5 @@
 use crate::errors::ParserError;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -24,6 +25,16 @@ impl FromStr for TxType {
     }
 }
 
+impl Display for TxType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Deposit => write!(f, "DEPOSIT"),
+            Self::Transfer => write!(f, "TRANSFER"),
+            Self::Withdrawal => write!(f, "WITHDRAWAL"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum TxStatus {
     Success,
@@ -43,6 +54,16 @@ impl FromStr for TxStatus {
                 field: "STATUS",
                 value: s.to_string(),
             }),
+        }
+    }
+}
+
+impl Display for TxStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Success => write!(f, "SUCCESS"),
+            Self::Failure => write!(f, "FAILURE"),
+            Self::Pending => write!(f, "PENDING"),
         }
     }
 }

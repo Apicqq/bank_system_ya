@@ -8,7 +8,7 @@ impl BankFormat for YPBankTxt {
     fn read<R: Read>(_reader: R) -> ParseResult<Vec<Transaction>> {
         todo!()
     }
-    fn write<W: Write>(_writer: W) -> ParseResult<()> {
+    fn write<W: Write>(_writer: W, _transactions: &[Transaction]) -> ParseResult<()> {
         todo!()
     }
 }
