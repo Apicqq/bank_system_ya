@@ -1,9 +1,22 @@
 use std::io::{Read, Write};
 
+use crate::errors::ParserError;
 use crate::{TxStatus, TxType, fields::parse_u64_field};
 use crate::{errors::ParseResult, format::BankFormat, model::Transaction};
 
 pub struct YPBankCsv;
+
+const CSV_FIELD_COUNT: usize = 8;
+
+fn validate_csv_length(record: &csv::StringRecord) -> ParseResult<()> {
+    if record.len() != CSV_FIELD_COUNT {
+        return Err(ParserError::InvalidFormat(format!(
+            "CSV record must contain exactly {CSV_FIELD_COUNT} fields, got {}",
+            record.len()
+        )));
+    }
+    Ok(())
+}
 
 impl BankFormat for YPBankCsv {
     fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
@@ -16,6 +29,7 @@ impl BankFormat for YPBankCsv {
         for record_result in csv_reader.records() {
             let record = record_result?;
 
+            validate_csv_length(&record)?;
             let transaction = Transaction {
                 tx_id: parse_u64_field(&record[0], "TX_ID")?,
                 tx_type: record[1].parse::<TxType>()?,
