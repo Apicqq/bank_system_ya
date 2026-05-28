@@ -17,7 +17,7 @@ impl From<io::Error> for ParserError {
 }
 
 impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Io(error) => write!(f, "I/O error: {error}"),
             Self::InvalidFormat(message) => write!(f, "Invalid format: {message}"),
