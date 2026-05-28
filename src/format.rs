@@ -10,5 +10,5 @@ pub trait BankFormat {
     /// Читает транзакции из переданного источника.
     fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>>;
     /// Записывает транзакции в переданный приёмник.
-    fn write<W: Write>(writer: W, transaction: &[Transaction]) -> ParseResult<()>;
+    fn write<W: Write>(writer: W, transactions: &[Transaction]) -> ParseResult<()>;
 }
