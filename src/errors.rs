@@ -1,3 +1,4 @@
+use csv;
 use std::{fmt, io};
 
 #[derive(Debug)]
@@ -8,7 +9,7 @@ pub enum ParserError {
     MissingField(&'static str),
 }
 
-pub type Result<T> = std::result::Result<T, ParserError>;
+pub type ParseResult<T> = Result<T, ParserError>;
 
 impl From<io::Error> for ParserError {
     fn from(value: io::Error) -> Self {
@@ -24,6 +25,15 @@ impl fmt::Display for ParserError {
             Self::InvalidField { field, value } => write!(f, "Invalid value for {field}: {value}"),
             Self::MissingField(field) => write!(f, "Missing required field: {field}"),
         }
+    }
+}
+
+impl From<csv::Error> for ParserError {
+    fn from(value: csv::Error) -> Self {
+        if let csv::ErrorKind::Io(io_error) = value.kind() {
+            return Self::Io(io::Error::new(io_error.kind(), io_error.to_string()));
+        }
+        Self::InvalidFormat(value.to_string())
     }
 }
 
