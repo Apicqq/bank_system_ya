@@ -10,7 +10,7 @@ use std::io::{Read, Write};
 pub struct YPBankCsv;
 
 const CSV_FIELD_COUNT: usize = 8;
-static HEADER: [&str; CSV_FIELD_COUNT] = [
+const HEADER: [&str; CSV_FIELD_COUNT] = [
     "TX_ID",
     "TX_TYPE",
     "FROM_USER_ID",
