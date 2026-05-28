@@ -3,6 +3,10 @@ use crate::{TxStatus, TxType, fields::parse_u64_field};
 use crate::{errors::ParseResult, format::BankFormat, model::Transaction};
 use std::io::{Read, Write};
 
+/// Формат CSV для записей YPBank.
+///
+/// Поддерживает чтение и запись CSV-файлов со строгим заголовком
+/// `TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION`.
 pub struct YPBankCsv;
 
 const CSV_FIELD_COUNT: usize = 8;
