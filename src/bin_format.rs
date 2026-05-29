@@ -91,6 +91,28 @@ fn read_record_body(body: &[u8]) -> ParseResult<Transaction> {
     })
 }
 
+fn transaction_to_body(transaction: &Transaction) -> ParseResult<Vec<u8>> {
+    let mut body = Vec::new();
+
+    body.extend_from_slice(&transaction.tx_id.to_be_bytes());
+    body.push(transaction.tx_type.bin_code());
+    body.extend_from_slice(&transaction.from_user_id.to_be_bytes());
+    body.extend_from_slice(&transaction.to_user_id.to_be_bytes());
+    body.extend_from_slice(&transaction.amount.to_be_bytes());
+    body.extend_from_slice(&transaction.timestamp.to_be_bytes());
+    body.push(transaction.status.bin_code());
+
+    let description = transaction.description.as_bytes();
+    let desc_len = u32::try_from(description.len()).map_err(|_| ParserError::InvalidField {
+        field: "DESCRIPTION",
+        value: format!("description is too long: {} bytes", description.len()),
+    })?;
+    body.extend_from_slice(&desc_len.to_be_bytes());
+    body.extend_from_slice(description);
+
+    Ok(body)
+}
+
 impl BankFormat for YpBankBin {
     fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
         let mut transactions = Vec::new();
@@ -113,8 +135,21 @@ impl BankFormat for YpBankBin {
         }
         Ok(transactions)
     }
-    fn write<W: Write>(_writer: W, _transactions: &[Transaction]) -> ParseResult<()> {
-        todo!()
+
+    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
+        for transaction in transactions {
+            let body = transaction_to_body(transaction)?;
+            let record_size = u32::try_from(body.len()).map_err(|_| {
+                ParserError::InvalidFormat(format!(
+                    "binary record body is too large: {} bytes",
+                    body.len()
+                ))
+            })?;
+            writer.write_all(MAGIC)?;
+            writer.write_all(&record_size.to_be_bytes())?;
+            writer.write_all(&body)?;
+        }
+        Ok(())
     }
 }
 
@@ -162,6 +197,72 @@ mod tests {
         record.extend_from_slice(&body);
 
         record
+    }
+
+    #[test]
+    fn write_serializes_binary_record() -> ParseResult<()> {
+        let mut output = Vec::new();
+        let transactions = [sample_transaction()];
+
+        YpBankBin::write(&mut output, &transactions)?;
+
+        assert_eq!(output, sample_record());
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_then_read_preserves_transactions() -> ParseResult<()> {
+        let transactions = [
+            sample_transaction(),
+            Transaction {
+                tx_id: 1002,
+                tx_type: TxType::Withdrawal,
+                from_user_id: 502,
+                to_user_id: 0,
+                amount: -1_000,
+                timestamp: 1_672_538_400_000,
+                status: TxStatus::Pending,
+                description: String::new(),
+            },
+        ];
+        let mut output = Vec::new();
+
+        YpBankBin::write(&mut output, &transactions)?;
+        let parsed = YpBankBin::read(&output[..])?;
+
+        assert_eq!(parsed, transactions);
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_empty_transactions_writes_empty_output() -> ParseResult<()> {
+        let mut output = Vec::new();
+
+        YpBankBin::write(&mut output, &[])?;
+
+        assert!(output.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_stores_magic_and_record_size() -> ParseResult<()> {
+        let mut output = Vec::new();
+        let transactions = [sample_transaction()];
+
+        YpBankBin::write(&mut output, &transactions)?;
+
+        assert_eq!(&output[..MAGIC.len()], MAGIC);
+
+        let mut size_bytes = [0u8; 4];
+        size_bytes.copy_from_slice(&output[MAGIC.len()..MAGIC.len() + 4]);
+        let record_size = u32::from_be_bytes(size_bytes) as usize;
+
+        assert_eq!(record_size, output.len() - MAGIC.len() - 4);
+
+        Ok(())
     }
 
     #[test]
