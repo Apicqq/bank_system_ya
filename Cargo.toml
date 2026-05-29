@@ -6,3 +6,10 @@ edition = "2024"
 [dependencies]
 csv = "1"
 
+[[bin]]
+name = "ypbank_converter"
+path = "src/main.rs"
+
+[[bin]]
+name = "ypbank_compare"
+path = "src/bin/comparer.rs"
