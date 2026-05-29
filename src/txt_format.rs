@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader, Read, Write};
 
 use crate::errors::ParserError;
-use crate::fields::parse_u64_field;
+use crate::fields::{parse_i64_field, parse_u64_field};
 use crate::{Transaction, TxStatus, TxType, errors::ParseResult, format::BankFormat};
 
 /// Текстовый формат YPBankText.
@@ -13,7 +13,7 @@ struct TransactionBuilder {
     tx_type: Option<TxType>,
     from_user_id: Option<u64>,
     to_user_id: Option<u64>,
-    amount: Option<u64>,
+    amount: Option<i64>,
     timestamp: Option<u64>,
     status: Option<TxStatus>,
     description: Option<String>,
@@ -54,7 +54,7 @@ impl TransactionBuilder {
             ),
             "AMOUNT" => Self::set_once(
                 &mut self.amount,
-                parse_u64_field(value, "AMOUNT")?,
+                parse_i64_field(value, "AMOUNT")?,
                 "AMOUNT",
             ),
             "TIMESTAMP" => Self::set_once(

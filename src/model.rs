@@ -4,13 +4,37 @@ use std::str::FromStr;
 
 /// Тип банковской транзакции.
 #[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum TxType {
     /// Пополнение счёта.
-    Deposit,
+    Deposit = 0,
     /// Перевод между пользователями.
-    Transfer,
+    Transfer = 1,
     /// Списание со счёта.
-    Withdrawal,
+    Withdrawal = 2,
+}
+impl TxType {
+    /// Возвращает числовой код типа транзакции для бинарного формата YPBankBin.
+    pub(crate) fn bin_code(&self) -> u8 {
+        match self {
+            Self::Deposit => 0,
+            Self::Transfer => 1,
+            Self::Withdrawal => 2,
+        }
+    }
+
+    /// Преобразует числовой код бинарного формата YPBankBin в тип транзакции.
+    pub(crate) fn from_bin_code(code: u8) -> Result<Self, ParserError> {
+        match code {
+            0 => Ok(Self::Deposit),
+            1 => Ok(Self::Transfer),
+            2 => Ok(Self::Withdrawal),
+            _ => Err(ParserError::InvalidField {
+                field: "TX_TYPE",
+                value: code.to_string(),
+            }),
+        }
+    }
 }
 
 impl FromStr for TxType {
@@ -41,13 +65,37 @@ impl Display for TxType {
 
 /// Статус обработки банковской транзакции.
 #[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum TxStatus {
     /// Транзакция успешно выполнена.
-    Success,
+    Success = 0,
     /// Транзакция завершилась ошибкой.
-    Failure,
+    Failure = 1,
     /// Транзакция ожидает обработки.
-    Pending,
+    Pending = 2,
+}
+impl TxStatus {
+    /// Возвращает числовой код статуса транзакции для бинарного формата YPBankBin.
+    pub(crate) fn bin_code(&self) -> u8 {
+        match self {
+            Self::Success => 0,
+            Self::Failure => 1,
+            Self::Pending => 2,
+        }
+    }
+
+    /// Преобразует числовой код бинарного формата YPBankBin в статус транзакции.
+    pub(crate) fn from_bin_code(code: u8) -> Result<Self, ParserError> {
+        match code {
+            0 => Ok(Self::Success),
+            1 => Ok(Self::Failure),
+            2 => Ok(Self::Pending),
+            _ => Err(ParserError::InvalidField {
+                field: "STATUS",
+                value: code.to_string(),
+            }),
+        }
+    }
 }
 
 impl FromStr for TxStatus {
@@ -87,11 +135,74 @@ pub struct Transaction {
     /// Идентификатор пользователя-получателя или `0` для списания.
     pub to_user_id: u64,
     /// Сумма транзакции в наименьших единицах валюты.
-    pub amount: u64,
+    pub amount: i64, // i64 выбран для совместимости всеми типами данных
     /// Unix timestamp транзакции в миллисекундах.
     pub timestamp: u64,
     /// Статус обработки транзакции.
     pub status: TxStatus,
     /// Текстовое описание транзакции.
     pub description: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tx_type_returns_binary_codes() {
+        assert_eq!(TxType::Deposit.bin_code(), 0);
+        assert_eq!(TxType::Transfer.bin_code(), 1);
+        assert_eq!(TxType::Withdrawal.bin_code(), 2);
+    }
+
+    #[test]
+    fn tx_type_parses_binary_codes() -> Result<(), ParserError> {
+        assert_eq!(TxType::from_bin_code(0)?, TxType::Deposit);
+        assert_eq!(TxType::from_bin_code(1)?, TxType::Transfer);
+        assert_eq!(TxType::from_bin_code(2)?, TxType::Withdrawal);
+
+        Ok(())
+    }
+
+    #[test]
+    fn tx_type_rejects_unknown_binary_code() {
+        let result = TxType::from_bin_code(3);
+
+        assert!(matches!(
+            result,
+            Err(ParserError::InvalidField {
+                field: "TX_TYPE",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn tx_status_returns_binary_codes() {
+        assert_eq!(TxStatus::Success.bin_code(), 0);
+        assert_eq!(TxStatus::Failure.bin_code(), 1);
+        assert_eq!(TxStatus::Pending.bin_code(), 2);
+    }
+
+    #[test]
+    fn tx_status_parses_binary_codes() -> Result<(), ParserError> {
+        assert_eq!(TxStatus::from_bin_code(0)?, TxStatus::Success);
+        assert_eq!(TxStatus::from_bin_code(1)?, TxStatus::Failure);
+        assert_eq!(TxStatus::from_bin_code(2)?, TxStatus::Pending);
+
+        Ok(())
+    }
+
+    #[test]
+    fn tx_status_rejects_unknown_binary_code() {
+        let result = TxStatus::from_bin_code(3);
+
+        assert!(matches!(
+            result,
+            Err(ParserError::InvalidField {
+                field: "STATUS",
+                ..
+            })
+        ));
+    }
 }
