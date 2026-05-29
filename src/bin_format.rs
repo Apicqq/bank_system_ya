@@ -2,6 +2,51 @@ use crate::errors::ParserError;
 use crate::{TxStatus, TxType, errors::ParseResult, format::BankFormat, model::Transaction};
 use std::io::{BufRead, Cursor, Read, Write};
 
+/// Бинарный формат YPBankBin.
+pub struct YpBankBin;
+
+const MAGIC: &[u8; 4] = b"YPBN";
+
+impl BankFormat for YpBankBin {
+    fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
+        let mut transactions = Vec::new();
+        let mut reader = std::io::BufReader::new(reader);
+
+        loop {
+            if !read_magic_or_eof(&mut reader)? {
+                break;
+            }
+            let record_size = read_u32_be(&mut reader)?;
+            let mut body: Vec<u8> = vec![0u8; record_size as usize];
+            reader.read_exact(&mut body).map_err(|error| {
+                ParserError::InvalidFormat(format!(
+                    "Could not read transaction body due to error: {}",
+                    error
+                ))
+            })?;
+            let transaction = read_record_body(&body)?;
+            transactions.push(transaction);
+        }
+        Ok(transactions)
+    }
+
+    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
+        for transaction in transactions {
+            let body = transaction_to_body(transaction)?;
+            let record_size = u32::try_from(body.len()).map_err(|_| {
+                ParserError::InvalidFormat(format!(
+                    "binary record body is too large: {} bytes",
+                    body.len()
+                ))
+            })?;
+            writer.write_all(MAGIC)?;
+            writer.write_all(&record_size.to_be_bytes())?;
+            writer.write_all(&body)?;
+        }
+        Ok(())
+    }
+}
+
 macro_rules! read_be_number {
     ($fn_name:ident, $type:ty, $size:expr) => {
         fn $fn_name<R: Read>(reader: &mut R) -> ParseResult<$type> {
@@ -11,11 +56,6 @@ macro_rules! read_be_number {
         }
     };
 }
-
-/// Бинарный формат YPBankBin.
-pub struct YpBankBin;
-
-const MAGIC: &[u8; 4] = b"YPBN";
 
 fn read_magic_or_eof<R: BufRead>(reader: &mut R) -> ParseResult<bool> {
     let mut buffer = [0u8; 4];
@@ -111,46 +151,6 @@ fn transaction_to_body(transaction: &Transaction) -> ParseResult<Vec<u8>> {
     body.extend_from_slice(description);
 
     Ok(body)
-}
-
-impl BankFormat for YpBankBin {
-    fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
-        let mut transactions = Vec::new();
-        let mut reader = std::io::BufReader::new(reader);
-
-        loop {
-            if !read_magic_or_eof(&mut reader)? {
-                break;
-            }
-            let record_size = read_u32_be(&mut reader)?;
-            let mut body: Vec<u8> = vec![0u8; record_size as usize];
-            reader.read_exact(&mut body).map_err(|error| {
-                ParserError::InvalidFormat(format!(
-                    "Could not read transaction body due to error: {}",
-                    error
-                ))
-            })?;
-            let transaction = read_record_body(&body)?;
-            transactions.push(transaction);
-        }
-        Ok(transactions)
-    }
-
-    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
-        for transaction in transactions {
-            let body = transaction_to_body(transaction)?;
-            let record_size = u32::try_from(body.len()).map_err(|_| {
-                ParserError::InvalidFormat(format!(
-                    "binary record body is too large: {} bytes",
-                    body.len()
-                ))
-            })?;
-            writer.write_all(MAGIC)?;
-            writer.write_all(&record_size.to_be_bytes())?;
-            writer.write_all(&body)?;
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]

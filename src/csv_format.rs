@@ -22,29 +22,6 @@ const HEADER: [&str; CSV_FIELD_COUNT] = [
     "DESCRIPTION",
 ];
 
-fn transaction_to_csv_record(transaction: &Transaction) -> [String; 8] {
-    [
-        transaction.tx_id.to_string(),
-        transaction.tx_type.to_string(),
-        transaction.from_user_id.to_string(),
-        transaction.to_user_id.to_string(),
-        transaction.amount.to_string(),
-        transaction.timestamp.to_string(),
-        transaction.status.to_string(),
-        transaction.description.clone(),
-    ]
-}
-
-fn validate_csv_length(record: &csv::StringRecord) -> ParseResult<()> {
-    if record.len() != CSV_FIELD_COUNT {
-        return Err(ParserError::InvalidFormat(format!(
-            "CSV record must contain exactly {CSV_FIELD_COUNT} fields, got {}",
-            record.len()
-        )));
-    }
-    Ok(())
-}
-
 impl BankFormat for YPBankCsv {
     fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
         let mut csv_reader = csv::ReaderBuilder::new()
@@ -85,6 +62,29 @@ impl BankFormat for YPBankCsv {
         writer.flush()?;
         Ok(())
     }
+}
+
+fn transaction_to_csv_record(transaction: &Transaction) -> [String; 8] {
+    [
+        transaction.tx_id.to_string(),
+        transaction.tx_type.to_string(),
+        transaction.from_user_id.to_string(),
+        transaction.to_user_id.to_string(),
+        transaction.amount.to_string(),
+        transaction.timestamp.to_string(),
+        transaction.status.to_string(),
+        transaction.description.clone(),
+    ]
+}
+
+fn validate_csv_length(record: &csv::StringRecord) -> ParseResult<()> {
+    if record.len() != CSV_FIELD_COUNT {
+        return Err(ParserError::InvalidFormat(format!(
+            "CSV record must contain exactly {CSV_FIELD_COUNT} fields, got {}",
+            record.len()
+        )));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
