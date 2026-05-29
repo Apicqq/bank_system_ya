@@ -13,6 +13,7 @@ pub enum TxType {
     /// Списание со счёта.
     Withdrawal = 2,
 }
+
 impl TxType {
     /// Возвращает числовой код типа транзакции для бинарного формата YPBankBin.
     pub(crate) fn bin_code(&self) -> u8 {
@@ -74,6 +75,7 @@ pub enum TxStatus {
     /// Транзакция ожидает обработки.
     Pending = 2,
 }
+
 impl TxStatus {
     /// Возвращает числовой код статуса транзакции для бинарного формата YPBankBin.
     pub(crate) fn bin_code(&self) -> u8 {
@@ -123,6 +125,7 @@ impl Display for TxStatus {
         }
     }
 }
+
 /// Одна запись банковской транзакции YPBank.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Transaction {
@@ -135,7 +138,9 @@ pub struct Transaction {
     /// Идентификатор пользователя-получателя или `0` для списания.
     pub to_user_id: u64,
     /// Сумма транзакции в наименьших единицах валюты.
-    pub amount: i64, // i64 выбран для совместимости всеми типами данных
+    ///
+    /// Используется знаковый тип для совместимости с бинарным форматом YPBankBin.
+    pub amount: i64,
     /// Unix timestamp транзакции в миллисекундах.
     pub timestamp: u64,
     /// Статус обработки транзакции.

@@ -7,6 +7,23 @@ use crate::{Transaction, TxStatus, TxType, errors::ParseResult, format::BankForm
 /// Текстовый формат YPBankText.
 pub struct YpBankText;
 
+impl BankFormat for YpBankText {
+    fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
+        let reader = BufReader::new(reader);
+        parse_transactions(reader)
+    }
+
+    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
+        for (index, transaction) in transactions.iter().enumerate() {
+            if index > 0 {
+                writeln!(writer)?;
+            }
+            write_transaction(&mut writer, transaction)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Default)]
 struct TransactionBuilder {
     tx_id: Option<u64>,
@@ -93,23 +110,6 @@ impl TransactionBuilder {
                 field: "DESCRIPTION",
                 value: value.to_string(),
             })
-    }
-}
-
-impl BankFormat for YpBankText {
-    fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
-        let reader = BufReader::new(reader);
-        parse_transactions(reader)
-    }
-
-    fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
-        for (index, transaction) in transactions.iter().enumerate() {
-            if index > 0 {
-                writeln!(writer)?;
-            }
-            write_transaction(&mut writer, transaction)?;
-        }
-        Ok(())
     }
 }
 
