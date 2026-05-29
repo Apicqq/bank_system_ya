@@ -13,7 +13,6 @@ pub enum TxType {
     /// Списание со счёта.
     Withdrawal = 2,
 }
-#[allow(dead_code)] // TODO: убрать после подключения к реализации
 impl TxType {
     /// Возвращает числовой код типа транзакции для бинарного формата YPBankBin.
     pub(crate) fn bin_code(&self) -> u8 {
@@ -75,7 +74,6 @@ pub enum TxStatus {
     /// Транзакция ожидает обработки.
     Pending = 2,
 }
-#[allow(dead_code)] // TODO: убрать после подключения к реализации
 impl TxStatus {
     /// Возвращает числовой код статуса транзакции для бинарного формата YPBankBin.
     pub(crate) fn bin_code(&self) -> u8 {
