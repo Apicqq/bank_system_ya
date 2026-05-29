@@ -5,7 +5,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn comparer_bin() -> &'static str {
-    env!("CARGO_BIN_EXE_comparer")
+    env!("CARGO_BIN_EXE_ypbank_compare")
 }
 
 fn temp_dir(test_name: &str) -> PathBuf {

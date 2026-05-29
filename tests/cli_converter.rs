@@ -5,7 +5,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn converter_bin() -> &'static str {
-    env!("CARGO_BIN_EXE_bank_system_ya")
+    env!("CARGO_BIN_EXE_ypbank_converter")
 }
 
 fn temp_dir(test_name: &str) -> PathBuf {
