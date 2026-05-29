@@ -1,4 +1,5 @@
 use crate::errors::ParserError;
+use crate::fields::parse_i64_field;
 use crate::{TxStatus, TxType, fields::parse_u64_field};
 use crate::{errors::ParseResult, format::BankFormat, model::Transaction};
 use std::io::{Read, Write};
@@ -61,7 +62,7 @@ impl BankFormat for YPBankCsv {
                 tx_type: record[1].parse::<TxType>()?,
                 from_user_id: parse_u64_field(&record[2], "FROM_USER_ID")?,
                 to_user_id: parse_u64_field(&record[3], "TO_USER_ID")?,
-                amount: parse_u64_field(&record[4], "AMOUNT")?,
+                amount: parse_i64_field(&record[4], "AMOUNT")?,
                 timestamp: parse_u64_field(&record[5], "TIMESTAMP")?,
                 status: record[6].parse::<TxStatus>()?,
                 description: record[7].to_string(),
