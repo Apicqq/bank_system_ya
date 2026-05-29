@@ -122,7 +122,7 @@ fn converter_returns_error_for_unsupported_format() {
 
     let stderr = String::from_utf8(output.stderr).expect("stderr must be valid UTF-8");
     assert!(stderr.contains("Unsupported format: xml"));
-    assert!(stderr.contains("usage: ypbank_converter"));
+    assert!(stderr.contains("Usage: ypbank_converter"));
 }
 
 #[test]

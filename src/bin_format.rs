@@ -112,6 +112,7 @@ fn read_record_body(body: &[u8]) -> ParseResult<Transaction> {
             field: "DESCRIPTION",
             value: error.to_string(),
         })?;
+    let description = normalize_binary_description(description);
 
     if cursor.position() as usize != body.len() {
         return Err(ParserError::InvalidFormat(String::from(
@@ -129,6 +130,14 @@ fn read_record_body(body: &[u8]) -> ParseResult<Transaction> {
         status,
         description,
     })
+}
+
+fn normalize_binary_description(description: String) -> String {
+    description
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .map(str::to_string)
+        .unwrap_or(description)
 }
 
 fn transaction_to_body(transaction: &Transaction) -> ParseResult<Vec<u8>> {
@@ -270,6 +279,21 @@ mod tests {
         let transactions = YpBankBin::read(&sample_record()[..])?;
 
         assert_eq!(transactions, vec![sample_transaction()]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_removes_text_format_quotes_from_description() -> ParseResult<()> {
+        let mut transaction = sample_transaction();
+        transaction.description = "\"Payment for services\"".to_string();
+
+        let mut record = Vec::new();
+        YpBankBin::write(&mut record, &[transaction])?;
+
+        let transactions = YpBankBin::read(&record[..])?;
+
+        assert_eq!(transactions[0].description, "Payment for services");
 
         Ok(())
     }
