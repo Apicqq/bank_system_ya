@@ -5,6 +5,8 @@
 
 /// Чтение и запись бинарного формата YPBankBin.
 pub mod bin_format;
+/// Общие вспомогательные элементы для CLI-приложений.
+pub mod cli_helpers;
 /// Чтение и запись CSV-формата YPBankCsv.
 pub mod csv_format;
 /// Ошибки и результат операций парсинга.
