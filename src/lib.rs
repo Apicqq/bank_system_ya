@@ -6,6 +6,7 @@
 #![warn(unused_crate_dependencies)]
 #![warn(unreachable_pub)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
 
 /// Чтение и запись бинарного формата `YPBankBin`.
 pub mod bin_format;
