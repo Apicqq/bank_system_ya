@@ -2,6 +2,7 @@ use crate::errors::ParserError;
 use crate::{TxStatus, TxType, errors::ParseResult, format::BankFormat, model::Transaction};
 use std::io::{BufRead, Cursor, Read, Write};
 
+#[derive(Debug)]
 /// Бинарный формат `YPBankBin`.
 pub struct YpBankBin;
 

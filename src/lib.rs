@@ -4,6 +4,7 @@
 //! а ввод и вывод выполняются через стандартные трейты [`std::io::Read`] и [`std::io::Write`].
 #![warn(missing_docs)]
 #![warn(unused_crate_dependencies)]
+#![warn(missing_debug_implementations)]
 #![warn(unreachable_pub)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::perf)]

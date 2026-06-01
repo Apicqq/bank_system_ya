@@ -4,6 +4,7 @@ use crate::errors::ParserError;
 use crate::fields::{parse_i64_field, parse_u64_field};
 use crate::{Transaction, TxStatus, TxType, errors::ParseResult, format::BankFormat};
 
+#[derive(Debug)]
 /// Текстовый формат `YPBankText`.
 pub struct YpBankText;
 

@@ -20,7 +20,7 @@ use std::str::FromStr;
 pub fn open_file(path: &Path) -> Result<File, String> {
     File::open(path).map_err(|error| format!("Could not open file '{}': {}", path.display(), error))
 }
-
+#[derive(Debug)]
 /// Формат данных, поддерживаемый CLI-приложениями.
 pub enum Format {
     /// Бинарный формат `YPBankBin`.
