@@ -1,7 +1,7 @@
 use csv;
 use std::{fmt, io};
 
-/// Ошибка чтения, записи или преобразования данных YPBank.
+/// Ошибка чтения, записи или преобразования данных `YPBank`.
 #[derive(Debug)]
 pub enum ParserError {
     /// Ошибка ввода-вывода.
@@ -9,12 +9,17 @@ pub enum ParserError {
     /// Нарушена структура входного формата.
     InvalidFormat(String),
     /// Поле содержит значение, которое невозможно преобразовать в ожидаемый тип.
-    InvalidField { field: &'static str, value: String },
+    InvalidField {
+        /// Название поля с некорректным значением.
+        field: &'static str,
+        /// Значение, которое не удалось преобразовать.
+        value: String,
+    },
     /// Обязательное поле отсутствует.
     MissingField(&'static str),
 }
 
-/// Результат операций парсинга и сериализации YPBank.
+/// Результат операций парсинга и сериализации `YPBank`.
 pub type ParseResult<T> = Result<T, ParserError>;
 
 impl From<io::Error> for ParserError {
