@@ -59,21 +59,18 @@ macro_rules! read_be_number {
 
 fn read_magic_or_eof<R: BufRead>(reader: &mut R) -> ParseResult<bool> {
     let mut buffer = [0u8; 4];
-    let mut read_bytes = 0;
 
-    while read_bytes < 4 {
-        let number = reader.read(&mut buffer[read_bytes..])?;
-        if number == 0 {
-            return if read_bytes == 0 {
-                Ok(false)
-            } else {
-                Err(ParserError::InvalidFormat(String::from(
-                    "Unexpected EOF while reading magic",
-                )))
-            };
-        }
-        read_bytes += number;
+    if reader.read(&mut buffer)? == 0 {
+        return Ok(false);
     }
+
+    reader.read_exact(&mut buffer[1..]).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::UnexpectedEof {
+            return ParserError::InvalidFormat(String::from("Unexpected EOF while reading magic"));
+        }
+        ParserError::Io(error)
+    })?;
+
     if buffer != *MAGIC {
         return Err(ParserError::InvalidFormat(String::from(
             "Could not read magic byte",
