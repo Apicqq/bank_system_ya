@@ -1,7 +1,7 @@
 use csv;
-use std::{fmt, io};
+use std::{fmt, io, num::TryFromIntError};
 
-/// Ошибка чтения, записи или преобразования данных YPBank.
+/// Ошибка чтения, записи или преобразования данных `YPBank`.
 #[derive(Debug)]
 pub enum ParserError {
     /// Ошибка ввода-вывода.
@@ -9,17 +9,30 @@ pub enum ParserError {
     /// Нарушена структура входного формата.
     InvalidFormat(String),
     /// Поле содержит значение, которое невозможно преобразовать в ожидаемый тип.
-    InvalidField { field: &'static str, value: String },
+    InvalidField {
+        /// Название поля с некорректным значением.
+        field: &'static str,
+        /// Значение, которое не удалось преобразовать.
+        value: String,
+    },
     /// Обязательное поле отсутствует.
     MissingField(&'static str),
+    /// Числовое значение не помещается в целевой тип.
+    IntConversion(TryFromIntError),
 }
 
-/// Результат операций парсинга и сериализации YPBank.
+/// Результат операций парсинга и сериализации `YPBank`.
 pub type ParseResult<T> = Result<T, ParserError>;
 
 impl From<io::Error> for ParserError {
     fn from(value: io::Error) -> Self {
         Self::Io(value)
+    }
+}
+
+impl From<TryFromIntError> for ParserError {
+    fn from(value: TryFromIntError) -> Self {
+        Self::IntConversion(value)
     }
 }
 
@@ -30,6 +43,7 @@ impl fmt::Display for ParserError {
             Self::InvalidFormat(message) => write!(f, "Invalid format: {message}"),
             Self::InvalidField { field, value } => write!(f, "Invalid value for {field}: {value}"),
             Self::MissingField(field) => write!(f, "Missing required field: {field}"),
+            Self::IntConversion(error) => write!(f, "Integer conversion error: {error}"),
         }
     }
 }

@@ -19,7 +19,7 @@ where
 ///
 /// Возвращает [`ParserError::InvalidField`] с именем поля и исходным значением,
 /// если значение не является корректным `u64`.
-pub fn parse_u64_field(value: &str, field: &'static str) -> ParseResult<u64> {
+pub(crate) fn parse_u64_field(value: &str, field: &'static str) -> ParseResult<u64> {
     parse_field(value, field)
 }
 
@@ -27,7 +27,7 @@ pub fn parse_u64_field(value: &str, field: &'static str) -> ParseResult<u64> {
 ///
 /// Возвращает [`ParserError::InvalidField`] с именем поля и исходным значением,
 /// если значение не является корректным `i64`.
-pub fn parse_i64_field(value: &str, field: &'static str) -> ParseResult<i64> {
+pub(crate) fn parse_i64_field(value: &str, field: &'static str) -> ParseResult<i64> {
     parse_field(value, field)
 }
 

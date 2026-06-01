@@ -1,4 +1,14 @@
-## [0.1.0] - 2026-05-29
+## [0.2.0] - 2026-06-01
+
+### 🚜 Refactor
+
+- Stream binary format I/O (#16)
+
+### ⚙️ Miscellaneous Tasks
+
+- Tighten linting and public API documentation (#15)
+
+## [0.1.0] - 2026-06-01
 
 ### 🚀 Features
 
@@ -15,7 +25,7 @@
 
 ### 📚 Documentation
 
-- Add project and CLI READMEs and define named binaries
+- Add project and CLI READMEs and define named binaries (#13)
 
 ### 🎨 Styling
 
