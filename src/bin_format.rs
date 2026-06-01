@@ -27,16 +27,21 @@ impl BankFormat for YpBankBin {
 
     fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
         for transaction in transactions {
-            let body = transaction_to_body(transaction)?;
-            let record_size = u32::try_from(body.len()).map_err(|_| {
-                ParserError::InvalidFormat(format!(
-                    "binary record body is too large: {} bytes",
-                    body.len()
-                ))
-            })?;
+            let description = transaction.description.as_bytes();
+            let description_len = u32::try_from(description.len())?;
+            let record_size = BODY_SIZE + description_len;
+
             writer.write_all(MAGIC)?;
             writer.write_all(&record_size.to_be_bytes())?;
-            writer.write_all(&body)?;
+            writer.write_all(&transaction.tx_id.to_be_bytes())?;
+            writer.write_all(&[transaction.tx_type.bin_code()])?;
+            writer.write_all(&transaction.from_user_id.to_be_bytes())?;
+            writer.write_all(&transaction.to_user_id.to_be_bytes())?;
+            writer.write_all(&transaction.amount.to_be_bytes())?;
+            writer.write_all(&transaction.timestamp.to_be_bytes())?;
+            writer.write_all(&[transaction.status.bin_code()])?;
+            writer.write_all(&description_len.to_be_bytes())?;
+            writer.write_all(description)?;
         }
         Ok(())
     }
@@ -142,28 +147,6 @@ fn normalize_binary_description(description: String) -> String {
         .and_then(|value| value.strip_suffix('"'))
         .map(str::to_string)
         .unwrap_or(description)
-}
-
-fn transaction_to_body(transaction: &Transaction) -> ParseResult<Vec<u8>> {
-    let mut body = Vec::new();
-
-    body.extend_from_slice(&transaction.tx_id.to_be_bytes());
-    body.push(transaction.tx_type.bin_code());
-    body.extend_from_slice(&transaction.from_user_id.to_be_bytes());
-    body.extend_from_slice(&transaction.to_user_id.to_be_bytes());
-    body.extend_from_slice(&transaction.amount.to_be_bytes());
-    body.extend_from_slice(&transaction.timestamp.to_be_bytes());
-    body.push(transaction.status.bin_code());
-
-    let description = transaction.description.as_bytes();
-    let desc_len = u32::try_from(description.len()).map_err(|_| ParserError::InvalidField {
-        field: "DESCRIPTION",
-        value: format!("description is too long: {} bytes", description.len()),
-    })?;
-    body.extend_from_slice(&desc_len.to_be_bytes());
-    body.extend_from_slice(description);
-
-    Ok(body)
 }
 
 #[cfg(test)]
