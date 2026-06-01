@@ -13,17 +13,21 @@ use std::path::Path;
 use std::str::FromStr;
 
 /// Открывает файл и возвращает строковую ошибку с путём при неудаче.
+///
+/// # Errors
+///
+/// Возвращает ошибку, если файл не удалось открыть.
 pub fn open_file(path: &Path) -> Result<File, String> {
     File::open(path).map_err(|error| format!("Could not open file '{}': {}", path.display(), error))
 }
 
 /// Формат данных, поддерживаемый CLI-приложениями.
 pub enum Format {
-    /// Бинарный формат YPBankBin.
+    /// Бинарный формат `YPBankBin`.
     Binary,
-    /// Табличный формат YPBankCsv.
+    /// Табличный формат `YPBankCsv`.
     Csv,
-    /// Текстовый формат YPBankText.
+    /// Текстовый формат `YPBankText`.
     Text,
 }
 impl FromStr for Format {
@@ -33,7 +37,7 @@ impl FromStr for Format {
             "bin" | "binary" | "b" | "bytes" => Ok(Self::Binary),
             "csv" | "table" | "c" => Ok(Self::Csv),
             "txt" | "text" | "t" => Ok(Self::Text),
-            _ => Err(format!("Unsupported format: {}", s)),
+            _ => Err(format!("Unsupported format: {s}")),
         }
     }
 }
@@ -55,6 +59,10 @@ impl Display for Format {
 }
 
 /// Возвращает следующее значение CLI-аргумента или ошибку, если значение отсутствует.
+///
+/// # Errors
+///
+/// Возвращает ошибку, если после флага нет значения.
 pub fn next_value<I>(args: &mut I, flag: &'static str) -> Result<String, String>
 where
     I: Iterator<Item = String>,
@@ -64,6 +72,10 @@ where
 }
 
 /// Читает транзакции из источника в указанном формате.
+///
+/// # Errors
+///
+/// Возвращает ошибку, если данные не соответствуют указанному формату или источник не удалось прочитать.
 pub fn read_transactions<R: Read>(reader: R, format: &Format) -> ParseResult<Vec<Transaction>> {
     match format {
         Format::Csv => YPBankCsv::read(reader),
@@ -73,6 +85,10 @@ pub fn read_transactions<R: Read>(reader: R, format: &Format) -> ParseResult<Vec
 }
 
 /// Записывает транзакции в приёмник в указанном формате.
+///
+/// # Errors
+///
+/// Возвращает ошибку, если транзакции не удалось записать в выбранном формате.
 pub fn write_transactions<W: Write>(
     writer: W,
     format: &Format,

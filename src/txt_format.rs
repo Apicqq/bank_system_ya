@@ -4,7 +4,7 @@ use crate::errors::ParserError;
 use crate::fields::{parse_i64_field, parse_u64_field};
 use crate::{Transaction, TxStatus, TxType, errors::ParseResult, format::BankFormat};
 
-/// Текстовый формат YPBankText.
+/// Текстовый формат `YPBankText`.
 pub struct YpBankText;
 
 impl BankFormat for YpBankText {
@@ -173,10 +173,10 @@ mod tests {
 
     fn sample_transaction() -> Transaction {
         Transaction {
-            tx_id: 1234567890123456,
+            tx_id: 1_234_567_890_123_456,
             tx_type: TxType::Deposit,
             from_user_id: 0,
-            to_user_id: 9876543210987654,
+            to_user_id: 9_876_543_210_987_654,
             amount: 10_000,
             timestamp: 1_633_036_800_000,
             status: TxStatus::Success,
@@ -280,10 +280,10 @@ DESCRIPTION: "User transfer"
         let transactions = [
             sample_transaction(),
             Transaction {
-                tx_id: 2312321321321321,
+                tx_id: 2_312_321_321_321_321,
                 tx_type: TxType::Transfer,
-                from_user_id: 1231231231231231,
-                to_user_id: 9876543210987654,
+                from_user_id: 1_231_231_231_231_231,
+                to_user_id: 9_876_543_210_987_654,
                 amount: 1_000,
                 timestamp: 1_633_056_800_000,
                 status: TxStatus::Failure,
@@ -307,10 +307,10 @@ DESCRIPTION: "User transfer"
         let transactions = [
             sample_transaction(),
             Transaction {
-                tx_id: 2312321321321321,
+                tx_id: 2_312_321_321_321_321,
                 tx_type: TxType::Transfer,
-                from_user_id: 1231231231231231,
-                to_user_id: 9876543210987654,
+                from_user_id: 1_231_231_231_231_231,
+                to_user_id: 9_876_543_210_987_654,
                 amount: 1_000,
                 timestamp: 1_633_056_800_000,
                 status: TxStatus::Failure,
@@ -329,9 +329,9 @@ DESCRIPTION: "User transfer"
 
     #[test]
     fn read_returns_missing_field_for_incomplete_record() {
-        let input = br#"TX_ID: 1234567890123456
+        let input = br"TX_ID: 1234567890123456
 TX_TYPE: DEPOSIT
-"#;
+";
 
         let result = YpBankText::read(&input[..]);
 
@@ -361,7 +361,7 @@ DESCRIPTION: "Terminal deposit"
 
     #[test]
     fn read_returns_invalid_field_for_description_without_quotes() {
-        let input = br#"TX_ID: 1234567890123456
+        let input = br"TX_ID: 1234567890123456
 TX_TYPE: DEPOSIT
 FROM_USER_ID: 0
 TO_USER_ID: 9876543210987654
@@ -369,7 +369,7 @@ AMOUNT: 10000
 TIMESTAMP: 1633036800000
 STATUS: SUCCESS
 DESCRIPTION: Terminal deposit
-"#;
+";
 
         let result = YpBankText::read(&input[..]);
 
@@ -384,10 +384,10 @@ DESCRIPTION: Terminal deposit
 
     #[test]
     fn read_returns_invalid_format_for_unknown_field() {
-        let input = br#"TX_ID: 1234567890123456
+        let input = br"TX_ID: 1234567890123456
 TX_TYPE: DEPOSIT
 UNKNOWN: value
-"#;
+";
 
         let result = YpBankText::read(&input[..]);
 
@@ -396,8 +396,8 @@ UNKNOWN: value
 
     #[test]
     fn read_returns_invalid_format_for_line_without_separator() {
-        let input = br#"TX_ID 1234567890123456
-"#;
+        let input = br"TX_ID 1234567890123456
+";
 
         let result = YpBankText::read(&input[..]);
 

@@ -5,12 +5,13 @@
 #![warn(missing_docs)]
 #![warn(unused_crate_dependencies)]
 #![warn(unreachable_pub)]
+#![warn(clippy::pedantic)]
 
-/// Чтение и запись бинарного формата YPBankBin.
+/// Чтение и запись бинарного формата `YPBankBin`.
 pub mod bin_format;
 /// Общие вспомогательные элементы для CLI-приложений.
 pub mod cli_helpers;
-/// Чтение и запись CSV-формата YPBankCsv.
+/// Чтение и запись CSV-формата `YPBankCsv`.
 pub mod csv_format;
 /// Ошибки и результат операций парсинга.
 pub mod errors;
@@ -19,7 +20,7 @@ pub(crate) mod fields;
 pub mod format;
 /// Общая модель банковских транзакций.
 pub mod model;
-/// Чтение и запись текстового формата YPBankText.
+/// Чтение и запись текстового формата `YPBankText`.
 pub mod txt_format;
 
 pub use model::{Transaction, TxStatus, TxType};

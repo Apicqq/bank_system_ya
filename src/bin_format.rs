@@ -2,7 +2,7 @@ use crate::errors::ParserError;
 use crate::{TxStatus, TxType, errors::ParseResult, format::BankFormat, model::Transaction};
 use std::io::{BufRead, Cursor, Read, Write};
 
-/// Бинарный формат YPBankBin.
+/// Бинарный формат `YPBankBin`.
 pub struct YpBankBin;
 
 const MAGIC: &[u8; 4] = b"YPBN";
@@ -20,8 +20,7 @@ impl BankFormat for YpBankBin {
             let mut body: Vec<u8> = vec![0u8; record_size as usize];
             reader.read_exact(&mut body).map_err(|error| {
                 ParserError::InvalidFormat(format!(
-                    "Could not read transaction body due to error: {}",
-                    error
+                    "Could not read transaction body due to error: {error}"
                 ))
             })?;
             let transaction = read_record_body(&body)?;
@@ -72,7 +71,7 @@ fn read_magic_or_eof<R: BufRead>(reader: &mut R) -> ParseResult<bool> {
                 )))
             };
         }
-        read_bytes += number
+        read_bytes += number;
     }
     if buffer != *MAGIC {
         return Err(ParserError::InvalidFormat(String::from(
@@ -114,7 +113,10 @@ fn read_record_body(body: &[u8]) -> ParseResult<Transaction> {
         })?;
     let description = normalize_binary_description(description);
 
-    if cursor.position() as usize != body.len() {
+    let body_len = u64::try_from(body.len())
+        .map_err(|_| ParserError::InvalidFormat(String::from("Binary record body is too large")))?;
+
+    if cursor.position() != body_len {
         return Err(ParserError::InvalidFormat(String::from(
             "Binary record body contains trailing bytes",
         )));
@@ -179,6 +181,10 @@ mod tests {
         }
     }
 
+    fn len_to_u32(len: usize) -> u32 {
+        u32::try_from(len).expect("test record length must fit into u32")
+    }
+
     fn sample_body() -> Vec<u8> {
         let transaction = sample_transaction();
         let description = transaction.description.as_bytes();
@@ -191,7 +197,7 @@ mod tests {
         body.extend_from_slice(&transaction.amount.to_be_bytes());
         body.extend_from_slice(&transaction.timestamp.to_be_bytes());
         body.push(1);
-        body.extend_from_slice(&(description.len() as u32).to_be_bytes());
+        body.extend_from_slice(&len_to_u32(description.len()).to_be_bytes());
         body.extend_from_slice(description);
 
         body
@@ -202,7 +208,7 @@ mod tests {
         let mut record = Vec::new();
 
         record.extend_from_slice(MAGIC);
-        record.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        record.extend_from_slice(&len_to_u32(body.len()).to_be_bytes());
         record.extend_from_slice(&body);
 
         record
@@ -358,7 +364,7 @@ mod tests {
         let mut record = Vec::new();
 
         record.extend_from_slice(MAGIC);
-        record.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        record.extend_from_slice(&len_to_u32(body.len()).to_be_bytes());
         record.extend_from_slice(&body);
 
         let result = YpBankBin::read(&record[..]);

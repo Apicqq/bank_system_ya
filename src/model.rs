@@ -15,7 +15,7 @@ pub enum TxType {
 }
 
 impl TxType {
-    /// Возвращает числовой код типа транзакции для бинарного формата YPBankBin.
+    /// Возвращает числовой код типа транзакции для бинарного формата `YPBankBin`.
     pub(crate) fn bin_code(&self) -> u8 {
         match self {
             Self::Deposit => 0,
@@ -24,7 +24,7 @@ impl TxType {
         }
     }
 
-    /// Преобразует числовой код бинарного формата YPBankBin в тип транзакции.
+    /// Преобразует числовой код бинарного формата `YPBankBin` в тип транзакции.
     pub(crate) fn from_bin_code(code: u8) -> Result<Self, ParserError> {
         match code {
             0 => Ok(Self::Deposit),
@@ -77,7 +77,7 @@ pub enum TxStatus {
 }
 
 impl TxStatus {
-    /// Возвращает числовой код статуса транзакции для бинарного формата YPBankBin.
+    /// Возвращает числовой код статуса транзакции для бинарного формата `YPBankBin`.
     pub(crate) fn bin_code(&self) -> u8 {
         match self {
             Self::Success => 0,
@@ -86,7 +86,7 @@ impl TxStatus {
         }
     }
 
-    /// Преобразует числовой код бинарного формата YPBankBin в статус транзакции.
+    /// Преобразует числовой код бинарного формата `YPBankBin` в статус транзакции.
     pub(crate) fn from_bin_code(code: u8) -> Result<Self, ParserError> {
         match code {
             0 => Ok(Self::Success),
@@ -126,7 +126,7 @@ impl Display for TxStatus {
     }
 }
 
-/// Одна запись банковской транзакции YPBank.
+/// Одна запись банковской транзакции `YPBank`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Transaction {
     /// Уникальный идентификатор транзакции.
@@ -139,7 +139,7 @@ pub struct Transaction {
     pub to_user_id: u64,
     /// Сумма транзакции в наименьших единицах валюты.
     ///
-    /// Используется знаковый тип для совместимости с бинарным форматом YPBankBin.
+    /// Используется знаковый тип для совместимости с бинарным форматом `YPBankBin`.
     pub amount: i64,
     /// Unix timestamp транзакции в миллисекундах.
     pub timestamp: u64,
