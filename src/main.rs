@@ -7,7 +7,7 @@ use bank_system_ya::cli_helpers::{
     Format, next_value, open_file, read_transactions, write_transactions,
 };
 use std::env;
-use std::io::{self};
+use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
 
 const USAGE: &str = "Usage: ypbank_converter --input <file> --input-format <csv|text|binary> --output-format <csv|text|binary>";
@@ -64,12 +64,16 @@ fn run() -> Result<(), String> {
     })?;
 
     let stdout = io::stdout();
-    write_transactions(stdout.lock(), &config.output_format, &transactions).map_err(|error| {
+    let mut writer = BufWriter::new(stdout.lock());
+    write_transactions(&mut writer, &config.output_format, &transactions).map_err(|error| {
         format!(
             "Could not write transactions as {} format: {}",
             config.output_format, error
         )
     })?;
+    writer
+        .flush()
+        .map_err(|error| format!("Could not flush stdout: {error}"))?;
 
     Ok(())
 }
