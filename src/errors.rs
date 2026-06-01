@@ -1,5 +1,5 @@
 use csv;
-use std::{fmt, io};
+use std::{fmt, io, num::TryFromIntError};
 
 /// Ошибка чтения, записи или преобразования данных `YPBank`.
 #[derive(Debug)]
@@ -17,6 +17,8 @@ pub enum ParserError {
     },
     /// Обязательное поле отсутствует.
     MissingField(&'static str),
+    /// Числовое значение не помещается в целевой тип.
+    IntConversion(TryFromIntError),
 }
 
 /// Результат операций парсинга и сериализации `YPBank`.
@@ -28,6 +30,12 @@ impl From<io::Error> for ParserError {
     }
 }
 
+impl From<TryFromIntError> for ParserError {
+    fn from(value: TryFromIntError) -> Self {
+        Self::IntConversion(value)
+    }
+}
+
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -35,6 +43,7 @@ impl fmt::Display for ParserError {
             Self::InvalidFormat(message) => write!(f, "Invalid format: {message}"),
             Self::InvalidField { field, value } => write!(f, "Invalid value for {field}: {value}"),
             Self::MissingField(field) => write!(f, "Missing required field: {field}"),
+            Self::IntConversion(error) => write!(f, "Integer conversion error: {error}"),
         }
     }
 }

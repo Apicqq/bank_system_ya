@@ -1,12 +1,13 @@
 use crate::errors::ParserError;
 use crate::{TxStatus, TxType, errors::ParseResult, format::BankFormat, model::Transaction};
-use std::io::{BufRead, Cursor, Read, Write};
+use std::io::{Read, Write};
 
 #[derive(Debug)]
 /// Бинарный формат `YPBankBin`.
 pub struct YpBankBin;
 
 const MAGIC: &[u8; 4] = b"YPBN";
+const BODY_SIZE: u32 = 46;
 
 impl BankFormat for YpBankBin {
     fn read<R: Read>(reader: R) -> ParseResult<Vec<Transaction>> {
@@ -18,13 +19,7 @@ impl BankFormat for YpBankBin {
                 break;
             }
             let record_size = read_u32_be(&mut reader)?;
-            let mut body: Vec<u8> = vec![0u8; record_size as usize];
-            reader.read_exact(&mut body).map_err(|error| {
-                ParserError::InvalidFormat(format!(
-                    "Could not read transaction body due to error: {error}"
-                ))
-            })?;
-            let transaction = read_record_body(&body)?;
+            let transaction = read_record(&mut reader, record_size)?;
             transactions.push(transaction);
         }
         Ok(transactions)
@@ -32,16 +27,21 @@ impl BankFormat for YpBankBin {
 
     fn write<W: Write>(mut writer: W, transactions: &[Transaction]) -> ParseResult<()> {
         for transaction in transactions {
-            let body = transaction_to_body(transaction)?;
-            let record_size = u32::try_from(body.len()).map_err(|_| {
-                ParserError::InvalidFormat(format!(
-                    "binary record body is too large: {} bytes",
-                    body.len()
-                ))
-            })?;
+            let description = transaction.description.as_bytes();
+            let description_len = u32::try_from(description.len())?;
+            let record_size = BODY_SIZE + description_len;
+
             writer.write_all(MAGIC)?;
             writer.write_all(&record_size.to_be_bytes())?;
-            writer.write_all(&body)?;
+            writer.write_all(&transaction.tx_id.to_be_bytes())?;
+            writer.write_all(&[transaction.tx_type.bin_code()])?;
+            writer.write_all(&transaction.from_user_id.to_be_bytes())?;
+            writer.write_all(&transaction.to_user_id.to_be_bytes())?;
+            writer.write_all(&transaction.amount.to_be_bytes())?;
+            writer.write_all(&transaction.timestamp.to_be_bytes())?;
+            writer.write_all(&[transaction.status.bin_code()])?;
+            writer.write_all(&description_len.to_be_bytes())?;
+            writer.write_all(description)?;
         }
         Ok(())
     }
@@ -57,23 +57,20 @@ macro_rules! read_be_number {
     };
 }
 
-fn read_magic_or_eof<R: BufRead>(reader: &mut R) -> ParseResult<bool> {
+fn read_magic_or_eof<R: Read>(reader: &mut R) -> ParseResult<bool> {
     let mut buffer = [0u8; 4];
-    let mut read_bytes = 0;
 
-    while read_bytes < 4 {
-        let number = reader.read(&mut buffer[read_bytes..])?;
-        if number == 0 {
-            return if read_bytes == 0 {
-                Ok(false)
-            } else {
-                Err(ParserError::InvalidFormat(String::from(
-                    "Unexpected EOF while reading magic",
-                )))
-            };
-        }
-        read_bytes += number;
+    if reader.read(&mut buffer[..1])? == 0 {
+        return Ok(false);
     }
+
+    reader.read_exact(&mut buffer[1..]).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::UnexpectedEof {
+            return ParserError::InvalidFormat(String::from("Unexpected EOF while reading magic"));
+        }
+        ParserError::Io(error)
+    })?;
+
     if buffer != *MAGIC {
         return Err(ParserError::InvalidFormat(String::from(
             "Could not read magic byte",
@@ -92,36 +89,45 @@ fn read_u8<R: Read>(reader: &mut R) -> ParseResult<u8> {
     Ok(byte[0])
 }
 
-fn read_record_body(body: &[u8]) -> ParseResult<Transaction> {
-    let mut cursor = Cursor::new(body);
+fn read_record<R: Read>(reader: &mut R, record_size: u32) -> ParseResult<Transaction> {
+    let desc_len = record_size.checked_sub(BODY_SIZE).ok_or_else(|| {
+        ParserError::InvalidFormat(format!(
+            "Binary record body is too short: {record_size} bytes"
+        ))
+    })?;
 
-    let tx_id = read_u64_be(&mut cursor)?;
-    let tx_type = TxType::from_bin_code(read_u8(&mut cursor)?)?;
-    let from_user_id = read_u64_be(&mut cursor)?;
-    let to_user_id = read_u64_be(&mut cursor)?;
-    let amount = read_i64_be(&mut cursor)?;
-    let timestamp = read_u64_be(&mut cursor)?;
-    let status = TxStatus::from_bin_code(read_u8(&mut cursor)?)?;
-    let desc_len = read_u32_be(&mut cursor)?;
+    let tx_id = read_u64_be(reader)?;
+    let tx_type = TxType::from_bin_code(read_u8(reader)?)?;
+    let from_user_id = read_u64_be(reader)?;
+    let to_user_id = read_u64_be(reader)?;
+    let amount = read_i64_be(reader)?;
+    let timestamp = read_u64_be(reader)?;
+    let status = TxStatus::from_bin_code(read_u8(reader)?)?;
+    let actual_desc_len = read_u32_be(reader)?;
 
-    let mut description_bytes = vec![0u8; desc_len as usize];
-    cursor.read_exact(&mut description_bytes)?;
+    if actual_desc_len != desc_len {
+        return Err(ParserError::InvalidFormat(format!(
+            "Binary record description length mismatch: header leaves {desc_len} bytes, field says {actual_desc_len}"
+        )));
+    }
 
-    let description =
-        String::from_utf8(description_bytes).map_err(|error| ParserError::InvalidField {
+    let mut description = String::new();
+    let mut description_reader = reader.take(u64::from(desc_len));
+
+    description_reader
+        .read_to_string(&mut description)
+        .map_err(|error| ParserError::InvalidField {
             field: "DESCRIPTION",
             value: error.to_string(),
         })?;
-    let description = normalize_binary_description(description);
 
-    let body_len = u64::try_from(body.len())
-        .map_err(|_| ParserError::InvalidFormat(String::from("Binary record body is too large")))?;
-
-    if cursor.position() != body_len {
+    if description_reader.limit() != 0 {
         return Err(ParserError::InvalidFormat(String::from(
-            "Binary record body contains trailing bytes",
+            "Unexpected EOF while reading description",
         )));
     }
+
+    let description = normalize_binary_description(description);
 
     Ok(Transaction {
         tx_id,
@@ -141,28 +147,6 @@ fn normalize_binary_description(description: String) -> String {
         .and_then(|value| value.strip_suffix('"'))
         .map(str::to_string)
         .unwrap_or(description)
-}
-
-fn transaction_to_body(transaction: &Transaction) -> ParseResult<Vec<u8>> {
-    let mut body = Vec::new();
-
-    body.extend_from_slice(&transaction.tx_id.to_be_bytes());
-    body.push(transaction.tx_type.bin_code());
-    body.extend_from_slice(&transaction.from_user_id.to_be_bytes());
-    body.extend_from_slice(&transaction.to_user_id.to_be_bytes());
-    body.extend_from_slice(&transaction.amount.to_be_bytes());
-    body.extend_from_slice(&transaction.timestamp.to_be_bytes());
-    body.push(transaction.status.bin_code());
-
-    let description = transaction.description.as_bytes();
-    let desc_len = u32::try_from(description.len()).map_err(|_| ParserError::InvalidField {
-        field: "DESCRIPTION",
-        value: format!("description is too long: {} bytes", description.len()),
-    })?;
-    body.extend_from_slice(&desc_len.to_be_bytes());
-    body.extend_from_slice(description);
-
-    Ok(body)
 }
 
 #[cfg(test)]
