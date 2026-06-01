@@ -9,7 +9,12 @@ pub enum ParserError {
     /// Нарушена структура входного формата.
     InvalidFormat(String),
     /// Поле содержит значение, которое невозможно преобразовать в ожидаемый тип.
-    InvalidField { field: &'static str, value: String },
+    InvalidField {
+        /// Название поля с некорректным значением.
+        field: &'static str,
+        /// Значение, которое не удалось преобразовать.
+        value: String,
+    },
     /// Обязательное поле отсутствует.
     MissingField(&'static str),
 }

@@ -19,8 +19,11 @@ pub fn open_file(path: &Path) -> Result<File, String> {
 
 /// Формат данных, поддерживаемый CLI-приложениями.
 pub enum Format {
+    /// Бинарный формат YPBankBin.
     Binary,
+    /// Табличный формат YPBankCsv.
     Csv,
+    /// Текстовый формат YPBankText.
     Text,
 }
 impl FromStr for Format {
