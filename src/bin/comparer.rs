@@ -64,8 +64,8 @@ fn compare(lhs: &[Transaction], rhs: &[Transaction]) -> Vec<String> {
             "Transaction count differs: left has {}, right has {}",
             lhs.len(),
             rhs.len()
-        ))
-    };
+        ));
+    }
     for (index, (lhs_transaction, rhs_transaction)) in lhs.iter().zip(rhs.iter()).enumerate() {
         if lhs_transaction != rhs_transaction {
             results.push(format!(
@@ -73,7 +73,7 @@ fn compare(lhs: &[Transaction], rhs: &[Transaction]) -> Vec<String> {
                 index + 1,
                 lhs_transaction,
                 rhs_transaction
-            ))
+            ));
         }
     }
     results
